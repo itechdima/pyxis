@@ -1,3 +1,9 @@
+nvslurm-plugin-pyxis (0.21.0-1) UNRELEASED; urgency=medium
+
+  * Release v0.21.0
+
+ -- NEBIUS <amialiusik@nebius.com>  Tue, 28 Jan 2025 00:17:05 +0000
+
 nvslurm-plugin-pyxis (0.20.0-1) UNRELEASED; urgency=medium
 
   * Release v0.20.0
