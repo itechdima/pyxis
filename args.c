@@ -14,7 +14,6 @@
 static struct plugin_args pyxis_args = {
 	.image = NULL,
 	.image_save = NULL,
-	.image_shared = -1,
 	.mounts = NULL,
 	.mounts_len = 0,
 	.workdir = NULL,
@@ -32,7 +31,6 @@ static struct plugin_args pyxis_args = {
 
 static int spank_option_image(int val, const char *optarg, int remote);
 static int spank_option_image_save(int val, const char *optarg, int remote);
-static int spank_option_image_shared(int val, const char *optarg, int remote);
 static int spank_option_mount(int val, const char *optarg, int remote);
 static int spank_option_workdir(int val, const char *optarg, int remote);
 static int spank_option_container_name(int val, const char *optarg, int remote);
@@ -60,23 +58,9 @@ struct spank_option spank_opts[] =
 		"If the specified file or directory already exists, it will be reused. "
 		"If the path does not exist, it will be created. "
 		"A directory path must end with '/' (e.g., /path/to/directory/ vs. /path/to/file). "
-		"If the image name itself contains '/', a nested directory will be created under the specified path (if it is a directory).",
+		"If the image name contains '/', a nested directory will be created under the specified path (if it is a directory)."
+		"If the option argument is empty (\"\"), SquashFS files will not be stored.",
 		1, 0, spank_option_image_save
-	},
-	{
-		"container-image-shared",
-		NULL,
-		"[pyxis] Pull images from only one of the nodes. "
-		"This option is available only when --container-image-save is specified. "
-		"It should be used when a shared filesystem is available for workers, eliminating the need for concurrent image pulling. "
-		"This helps prevent registry throttling.",
-		0, 1, spank_option_image_shared,
-	},
-	{
-		"no-container-image-shared",
-		NULL,
-		"[pyxis] Pull images independently on all nodes.",
-		0, 0, spank_option_image_shared,
 	},
 	{
 		"container-mounts",
@@ -527,7 +511,7 @@ fail:
 
 static int spank_option_image_save(int val, const char *optarg, int remote)
 {
-	if (optarg == NULL || *optarg == '\0') {
+	if (optarg == NULL) {
 		slurm_error("pyxis: --container-image-save: argument required");
 		return (-1);
 	}
@@ -539,20 +523,6 @@ static int spank_option_image_save(int val, const char *optarg, int remote)
 	}
 
 	pyxis_args.image_save = strdup(optarg);
-
-	return (0);
-}
-
-
-
-static int spank_option_image_shared(int val, const char *optarg, int remote)
-{
-	if (pyxis_args.image_shared != -1 && pyxis_args.image_shared != val) {
-		slurm_error("pyxis: both --container-image-shared and --no-container-image-shared were specified");
-		return (-1);
-	}
-
-	pyxis_args.image_shared = val;
 
 	return (0);
 }
@@ -585,26 +555,6 @@ bool pyxis_args_enabled(void)
 			slurm_error("pyxis: ignoring --[no-]container-remap-root because neither --container-image nor --container-name is set");
 		if (pyxis_args.entrypoint != -1)
 			slurm_error("pyxis: ignoring --[no-]container-entrypoint because neither --container-image nor --container-name is set");
-		return (false);
-	}
-
-	return (true);
-}
-
-bool pyxis_args_valid(struct plugin_config config)
-{
-	char* image_save = pyxis_args.image_save;
-	if (image_save == NULL && strlen(config.container_image_save) != 0) {
-		image_save = config.container_image_save;
-	}
-
-	int image_shared = pyxis_args.image_shared;
-	if (image_shared == -1 && config.container_image_shared != -1) {
-		image_shared = config.container_image_shared;
-	}
-
-	if (image_shared == 1 && image_save == NULL) {
-		slurm_error("pyxis: --container-image-shared is set without --container-image-save");
 		return (false);
 	}
 
